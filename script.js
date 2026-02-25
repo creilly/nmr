@@ -138,6 +138,16 @@ function draw() {
     ctx.moveTo(0, 0);
     ctx.lineTo(yoff, -yoff);
     ctx.stroke();
+    // equatorial longitude marker (rotating frame phi)
+    const phi = Math.atan2(My_r, Mx_r);
+    const eqx = Math.cos(phi);
+    const eqy = Math.sin(phi);
+    const markX = (eqx + 0.5 * eqy) * radius;
+    const markY = (0 + 0.3 * eqy) * radius;
+    ctx.fillStyle = 'blue';
+    ctx.beginPath();
+    ctx.arc(markX, markY, 5, 0, 2 * Math.PI);
+    ctx.fill();
     // Bloch vector projection using rotating-frame components
     const projX = (Mx_r + 0.5 * My_r) * radius;
     const projY = (-Mz_r + 0.3 * My_r) * radius;
