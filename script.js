@@ -157,9 +157,17 @@ function draw() {
     ctx.lineTo(projX, projY);
     ctx.stroke();
     ctx.restore();
-    // info text
+    // info text in rotating-frame cylindrical coords
+    // compute rotating-frame components regardless of toggle
+    const angle = -omega0 * labTime;
+    const cosA = Math.cos(angle), sinA = Math.sin(angle);
+    const Mx_r = M.x * cosA - M.y * sinA;
+    const My_r = M.x * sinA + M.y * cosA;
+    const Mz_r = M.z;
+    const rho = Math.hypot(Mx_r, My_r);
+    const phi = Math.atan2(My_r, Mx_r); // radians
     document.getElementById('info').textContent =
-        `M = (${M.x.toFixed(2)}, ${M.y.toFixed(2)}, ${M.z.toFixed(2)})`;
+        `\u03C1=${rho.toFixed(2)}, φ=${phi.toFixed(2)}, z=${Mz_r.toFixed(2)}`;
 }
 
 function animate(timestamp) {
