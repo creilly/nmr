@@ -489,7 +489,6 @@ toneLockBtn = document.getElementById('tone-lock');
 toneLed = document.getElementById('tone-led');
 pulsePi2Btn = document.getElementById('pulse-pi2');
 pulsePiBtn = document.getElementById('pulse-pi');
-detuneControl = document.getElementById('detune');
 detuneValueDisplay = document.getElementById('detune-val');
 larmorControl = document.getElementById('larmor');
 larmorValueDisplay = document.getElementById('larmor-val');
@@ -550,17 +549,15 @@ function updateToneState() {
         toneLed.classList.toggle('on', toneOn);
     }
     if (toneBtn) {
-        toneBtn.disabled = pulseActive;
+        toneBtn.disabled = toneLocked || pulseActive;
     }
+    if (pulsePi2Btn) pulsePi2Btn.disabled = toneLocked;
+    if (pulsePiBtn)  pulsePiBtn.disabled  = toneLocked;
 }
 
-// Tone button: in locked mode, clicking toggles; in free mode, holding keeps it on
+// Tone button: hold to drive (only active when not latched)
 toneBtn.addEventListener('click', () => {
     if (!audioCtx) initAudio();
-    if (toneLocked) {
-        holdTone = !holdTone;
-        updateToneState();
-    }
 });
 
 toneBtn.addEventListener('mousedown', () => {
@@ -585,17 +582,16 @@ toneBtn.addEventListener('mouseleave', () => {
     }
 });
 
-// Lock button: toggles between locked and free modes
+// Latch button: toggles constant drive; disables Fire and pulse buttons while active
 toneLockBtn.addEventListener('click', () => {
+    if (!audioCtx) initAudio();
     toneLocked = !toneLocked;
+    holdTone = toneLocked;
     toneLockBtn.style.fontWeight = toneLocked ? 'bold' : 'normal';
     toneLockBtn.style.backgroundColor = toneLocked ? '#ddd' : '';
-    if (!toneLocked) {
-        // When unlocking, release the tone
-        holdTone = false;
-        updateToneState();
-    }
+    updateToneState();
 });
+toneLockBtn.click(); // start latched
 
 function triggerPulse(pulseAngle) {
     if (!audioCtx) initAudio();
