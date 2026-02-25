@@ -70,7 +70,7 @@ function initAudio() {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const sampleDt = 1 / audioCtx.sampleRate;
 
-    scriptProcessor = audioCtx.createScriptProcessor(4096, 0, 1);
+    scriptProcessor = audioCtx.createScriptProcessor(1024, 0, 1);
     outputGainNode = audioCtx.createGain();
     outputGainNode.gain.value = 0.1;
     scriptProcessor.onaudioprocess = (e) => {
@@ -518,6 +518,11 @@ function animate() {
 // Auto-start animation and physics immediately
 requestAnimationFrame(animate);
 startPhysicsInterval();
+
+// Eagerly init audio on first interaction with any control (pointerdown fires before click)
+document.querySelector('.controls').addEventListener('pointerdown', () => {
+    if (!audioCtx) initAudio(); else audioCtx.resume();
+}, { once: true });
 
 // tone UI
 toneControl = document.getElementById('tone-vol');
