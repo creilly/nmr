@@ -1,8 +1,12 @@
 body {
     font-family: sans-serif;
     text-align: center;
-    margin: 0;
+    margin: 25px auto;
     padding: 0;
+    max-width: 600px;
+}
+p {
+    text-align: justify;
 }
 canvas {
     border: 1px solid #444;
@@ -10,10 +14,56 @@ canvas {
 }
 .controls {
     margin-top: 10px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.controls button {
+    margin: 4px 4px;
+}
+.led {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #777;
+    margin: 0 6px;
+    vertical-align: middle;
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.5);
+}
+.led.on {
+    background: #28c840;
+    box-shadow: 0 0 6px rgba(40, 200, 64, 0.8);
+}
+.controls button:disabled {
+    opacity: 0.6;
+}
+.controls input[type="range"] {
+    width: 200px;
+}
+/* Frequency control table */
+.freq-table {
+    margin: 10px auto;
+    border-collapse: collapse;
+}
+.freq-table td {
+    padding: 2px 5px;
+}
+.freq-table td:first-child {
+    text-align: right;
+    white-space: nowrap;
+}
+.freq-table td:last-child {
+    font-family: monospace;
+    text-align: left;
+    white-space: pre;
 }
 #info {
     margin-top: 10px;
     font-family: monospace;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .meter {
@@ -37,4 +87,11 @@ canvas {
     background: green;
     height: 100%;
     width: 0%;
+    transition: background 0.2s;
+}
+.fill.disabled {
+    background: #bbb !important;
+}
+.mic-fill {
+    background: #e07820;
 }

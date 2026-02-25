@@ -7,30 +7,53 @@
 </head>
 <body>
     <h1>NMR Bloch Sphere Simulator</h1>
-    <p>This demo models a two-level spin in a static magnetic field with longitudinal (T1) and transverse (T2) relaxation.  Use your microphone input to drive an x‑polarized RF field; louder audio produces stronger pulses.</p>
-    <canvas id="bloch" width="500" height="500"></canvas>
+    <p>This demo models a two-level spin in a static magnetic field with longitudinal (T1) and transverse (T2) relaxation.</p>
+    <canvas id="bloch" width="350" height="350"></canvas>
     <div class="controls">
-        <button id="start">Start</button>
-        <label for="scale">Drive scale</label>
-        <input id="scale" type="range" min="0" max="50" step="0.1" value="10">
-        <span id="scale-val">10</span>
+        <select id="mag-preset">
+            <option value="south">South pole</option>
+            <option value="equator">Equator</option>
+        </select>
+        <button id="set-mag">Set</button>
         <br>
         <button id="tone-btn">Hold for tone</button>
-        <label for="tone-vol">Tone volume</label>
-        <!-- amplitude w1; initial value pi for 1s pi pulse -->
-        <input id="tone-vol" type="range" min="0" max="5" step="0.01" value="1">
-        <span id="tone-val">1</span>
+        <button id="tone-lock">Lock</button>
+        <span id="tone-led" class="led" title="Tone on"></span>
+        <button id="pulse-pi2">π/2 pulse</button>
+        <button id="pulse-pi">π pulse</button>
         <br>
-        <label><input type="checkbox" id="mic-toggle" checked> Mic drive</label>
-        <br>
+        <table class="freq-table">
+            <tr>
+                <td><label for="tone-vol">Rabi freq (Hz)</label></td>
+                <td><input id="tone-vol" type="range" min="-2" max="2" step="0.01" value="0"></td>
+                <td><span id="tone-val">1</span></td>
+            </tr>
+            <tr>
+                <td><label for="larmor">Larmor (Hz)</label></td>
+                <td><input id="larmor" type="range" min="-2" max="3.3" step="0.01" value="2.48"></td>
+                <td><span id="larmor-val">300</span></td>
+            </tr>
+            <tr>
+                <td><label for="detune">Detune (Hz)</label></td>
+                <td><input id="detune" type="range" min="-10" max="10" step="0.01" value="0"></td>
+                <td><span id="detune-val">0.00</span></td>
+            </tr>
+        </table>
         <label><input type="checkbox" id="frame-toggle" checked> Rotating frame</label>
         <br>
+        <label><input type="checkbox" id="torque-toggle" checked> Show <span style="-webkit-text-stroke: 0.5px #ff8800; color: #000">torque vector</span></label>
+        <br>
+        <label><input type="checkbox" id="t1-toggle"></label>
         <label for="t1-slider">T1 (s)</label>
-        <input id="t1-slider" type="range" min="-1" max="2" step="0.01" value="0">
+        <input id="t1-slider" type="range" min="-1" max="2" step="0.01" value="0" disabled>
         <span id="t1-val">1</span>
+        <br>
+        <label><input type="checkbox" id="t2-toggle"></label>
         <label for="t2-slider">T2 (s)</label>
-        <input id="t2-slider" type="range" min="-1" max="2" step="0.01" value="-0.3">
+        <input id="t2-slider" type="range" min="-1" max="2" step="0.01" value="-0.3" disabled>
         <span id="t2-val">0.5</span>
+        <br>
+        <label><input type="checkbox" id="audio-out-toggle"> Mx audio output</label>
     </div>
     <div id="info">
         <div class="meter">
