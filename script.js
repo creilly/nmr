@@ -12,6 +12,9 @@ const omega0 = 2 * Math.PI * toneFreq;
 
 let labTime = 0; // track seconds elapsed for rotating frame
 
+let micEnabled = true;
+let micToggle = null;
+
 let t1Slider = null;
 let t1Display = null;
 let t2Slider = null;
@@ -51,26 +54,51 @@ function initAudio() {
 // the dataArray is refreshed each animation frame; we'll step
 // through its samples using the known audio sample rate.
 
+// helper computes Bloch derivative for given magnetization and B1
+function blochDeriv(m, B1) {
+    return {
+        x: omega0 * m.y - m.x / T2,
+        y: m.z * B1 - omega0 * m.x - m.y / T2,
+        z: -m.y * B1 - (m.z - M0) / T1
+    };
+}
+
 function updateBlochWithSignal(data, dt) {
     const scale = parseFloat(scaleControl.value);
     const toneVol = parseFloat(toneControl.value);
     const sampleDt = 1 / audioCtx.sampleRate;
-    // integrate one little step per sample
+    // integrate one little step per sample using RK4
     for (let i = 0; i < data.length; i++) {
-        // B1 from mic plus oscillating tone
-        let B1 = data[i] * scale;
+        let B1 = micEnabled ? data[i] * scale : 0;
         if (toneOn) {
             B1 += toneVol * Math.sin(tonePhase);
             tonePhase += omega0 * sampleDt;
             if (tonePhase > 2 * Math.PI) tonePhase -= 2 * Math.PI;
         }
-        // Bloch equations in lab frame with B0 along z (B0 = omega0)
-        const dMx = omega0 * M.y - M.x / T2;
-        const dMy = M.z * B1 - omega0 * M.x - M.y / T2;
-        const dMz = -M.y * B1 - (M.z - M0) / T1;
-        M.x += dMx * sampleDt;
-        M.y += dMy * sampleDt;
-        M.z += dMz * sampleDt;
+        // RK4
+        const k1 = blochDeriv(M, B1);
+        const m2 = { x: M.x + 0.5 * k1.x * sampleDt,
+                     y: M.y + 0.5 * k1.y * sampleDt,
+                     z: M.z + 0.5 * k1.z * sampleDt };
+        const k2 = blochDeriv(m2, B1);
+        const m3 = { x: M.x + 0.5 * k2.x * sampleDt,
+                     y: M.y + 0.5 * k2.y * sampleDt,
+                     z: M.z + 0.5 * k2.z * sampleDt };
+        const k3 = blochDeriv(m3, B1);
+        const m4 = { x: M.x + k3.x * sampleDt,
+                     y: M.y + k3.y * sampleDt,
+                     z: M.z + k3.z * sampleDt };
+        const k4 = blochDeriv(m4, B1);
+        M.x += (k1.x + 2 * k2.x + 2 * k3.x + k4.x) * (sampleDt / 6);
+        M.y += (k1.y + 2 * k2.y + 2 * k3.y + k4.y) * (sampleDt / 6);
+        M.z += (k1.z + 2 * k2.z + 2 * k3.z + k4.z) * (sampleDt / 6);
+        // optionally renormalize to avoid drift
+        const mag = Math.hypot(M.x, M.y, M.z);
+        if (mag > 2) {
+            M.x /= mag;
+            M.y /= mag;
+            M.z /= mag;
+        }
         labTime += sampleDt;
     }
 }
@@ -149,6 +177,12 @@ toneControl = document.getElementById('tone-vol');
 toneValueDisplay = document.getElementById('tone-val');
 toneBtn = document.getElementById('tone-btn');
 
+// mic toggle
+micToggle = document.getElementById('mic-toggle');
+if (micToggle) {
+    micToggle.addEventListener('change', () => { micEnabled = micToggle.checked; });
+}
+
 toneControl.addEventListener('input', () => {
     toneValueDisplay.textContent = toneControl.value;
 });
@@ -160,6 +194,11 @@ toneBtn.addEventListener('mouseleave', () => { toneOn = false; });
 // ensure tone value display matches slider default (pi)
 if (toneControl) {
     toneValueDisplay.textContent = toneControl.value;
+}
+
+// mic toggle default
+if (micToggle) {
+    micEnabled = micToggle.checked;
 }
 
 // T1/T2 sliders (log scale -1 to 2 corresponds to 0.1s–100s)
