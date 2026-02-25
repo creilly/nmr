@@ -20,7 +20,9 @@ let pulsePi2Btn = null;
 let pulsePiBtn = null;
 let holdTone = false;
 let pulseActive = false;
-let pulseSamplesRemaining = 0;
+let pulseSamplesRemaining = 0; // kept for compat reference; timing now uses pulseTimeRemaining
+let pulseTimeRemaining = 0;    // seconds remaining in current pulse
+let physicsIntervalId = null;  // setInterval id used before audio init
 let toneOn = false;
 let tonePhase = 0;
 let toneFreq = 1; // Hz (also B0 Larmor frequency)
@@ -64,6 +66,7 @@ let yScale = 0.3; // Adjust this to change y-axis foreshortening (0.25 = very sh
 let yAngleDeg = 45; // Angle (in degrees) of y-axis projection relative to x-axis (positive = up-right)
 
 function initAudio() {
+    stopPhysicsInterval(); // audio thread takes over physics
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const sampleDt = 1 / audioCtx.sampleRate;
 
@@ -72,48 +75,11 @@ function initAudio() {
     outputGainNode.gain.value = 0.1;
     scriptProcessor.onaudioprocess = (e) => {
         const output = e.outputBuffer.getChannelData(0);
-        const toneHz = toneControl ? Math.pow(10, parseFloat(toneControl.value)) : 1;
-        const rabiOmega = 2 * Math.PI * toneHz;
-        const omegaDrive = 2 * Math.PI * (toneFreq + detuneHz);
         for (let i = 0; i < output.length; i++) {
-            let B1 = 0;
-            if (holdTone || pulseSamplesRemaining > 0) {
-                B1 = rabiOmega * Math.sin(tonePhase);
-                tonePhase += omegaDrive * sampleDt;
-                if (tonePhase > 2 * Math.PI) tonePhase -= 2 * Math.PI;
-                if (pulseSamplesRemaining > 0) {
-                    pulseSamplesRemaining--;
-                    if (pulseSamplesRemaining === 0) {
-                        pulseActive = false;
-                        // schedule UI update on next frame
-                        setTimeout(updateToneState, 0);
-                    }
-                }
-            }
-            const k1 = blochDerivLab(M, B1);
-            const m2 = { x: M.x + 0.5*k1.x*sampleDt, y: M.y + 0.5*k1.y*sampleDt, z: M.z + 0.5*k1.z*sampleDt };
-            const k2 = blochDerivLab(m2, B1);
-            const m3 = { x: M.x + 0.5*k2.x*sampleDt, y: M.y + 0.5*k2.y*sampleDt, z: M.z + 0.5*k2.z*sampleDt };
-            const k3 = blochDerivLab(m3, B1);
-            const m4 = { x: M.x + k3.x*sampleDt, y: M.y + k3.y*sampleDt, z: M.z + k3.z*sampleDt };
-            const k4 = blochDerivLab(m4, B1);
-            M.x += (k1.x + 2*k2.x + 2*k3.x + k4.x) * (sampleDt / 6);
-            M.y += (k1.y + 2*k2.y + 2*k3.y + k4.y) * (sampleDt / 6);
-            M.z += (k1.z + 2*k2.z + 2*k3.z + k4.z) * (sampleDt / 6);
-            const mag = Math.hypot(M.x, M.y, M.z);
-            if (mag > 2) { M.x /= mag; M.y /= mag; M.z /= mag; }
-            labTime += sampleDt;
+            physicsStep(sampleDt);
             output[i] = audioOutputEnabled ? M.x : 0;
         }
-        // Update rotating frame coords for display — locked to drive frequency
-        const omegaRot = 2 * Math.PI * (toneFreq + detuneHz);
-        const angle = omegaRot * labTime;
-        const cosA = Math.cos(angle), sinA = Math.sin(angle);
-        Mx_rot = M.x * cosA - M.y * sinA;
-        My_rot = M.x * sinA + M.y * cosA;
-        Mz_rot = M.z;
-        rho_rot = Math.hypot(Mx_rot, My_rot);
-        phi_rot = Math.atan2(My_rot, Mx_rot);
+        updateRotatingFrame();
     };
     scriptProcessor.connect(outputGainNode);
     outputGainNode.connect(audioCtx.destination);
@@ -129,6 +95,77 @@ function blochDerivLab(m, B1) {
         y: -omega0 * m.x - m.y * invT2eff,
         z: m.x * B1 - (m.z - M0) * invT1
     };
+}
+
+// Advance Bloch equations by dt seconds (single RK4 step)
+function physicsStep(dt) {
+    const toneHz = toneControl ? Math.pow(10, parseFloat(toneControl.value)) : 1;
+    const rabiOmega = 2 * Math.PI * toneHz;
+    const omegaDrive = 2 * Math.PI * (toneFreq + detuneHz);
+    let B1 = 0;
+    if (holdTone || pulseTimeRemaining > 0) {
+        B1 = rabiOmega * Math.sin(tonePhase);
+        tonePhase += omegaDrive * dt;
+        if (tonePhase > 2 * Math.PI) tonePhase -= 2 * Math.PI;
+        if (pulseTimeRemaining > 0) {
+            pulseTimeRemaining -= dt;
+            if (pulseTimeRemaining <= 0) {
+                pulseTimeRemaining = 0;
+                pulseActive = false;
+                setTimeout(updateToneState, 0);
+            }
+        }
+    }
+    const k1 = blochDerivLab(M, B1);
+    const m2 = { x: M.x + 0.5*k1.x*dt, y: M.y + 0.5*k1.y*dt, z: M.z + 0.5*k1.z*dt };
+    const k2 = blochDerivLab(m2, B1);
+    const m3 = { x: M.x + 0.5*k2.x*dt, y: M.y + 0.5*k2.y*dt, z: M.z + 0.5*k2.z*dt };
+    const k3 = blochDerivLab(m3, B1);
+    const m4 = { x: M.x + k3.x*dt, y: M.y + k3.y*dt, z: M.z + k3.z*dt };
+    const k4 = blochDerivLab(m4, B1);
+    M.x += (k1.x + 2*k2.x + 2*k3.x + k4.x) * (dt / 6);
+    M.y += (k1.y + 2*k2.y + 2*k3.y + k4.y) * (dt / 6);
+    M.z += (k1.z + 2*k2.z + 2*k3.z + k4.z) * (dt / 6);
+    const mag = Math.hypot(M.x, M.y, M.z);
+    if (mag > 2) { M.x /= mag; M.y /= mag; M.z /= mag; }
+    labTime += dt;
+}
+
+// Update rotating-frame display coords (called once per audio buffer or per interval tick)
+function updateRotatingFrame() {
+    const omegaRot = 2 * Math.PI * (toneFreq + detuneHz);
+    const angle = omegaRot * labTime;
+    const cosA = Math.cos(angle), sinA = Math.sin(angle);
+    Mx_rot = M.x * cosA - M.y * sinA;
+    My_rot = M.x * sinA + M.y * cosA;
+    Mz_rot = M.z;
+    rho_rot = Math.hypot(Mx_rot, My_rot);
+    phi_rot = Math.atan2(My_rot, Mx_rot);
+}
+
+// Lightweight physics interval used before audio is initialised
+function startPhysicsInterval() {
+    if (physicsIntervalId !== null) return;
+    const SUB_DT = 1 / 4000; // max 0.25 ms per RK4 step — keeps integrator stable
+    let lastTime = performance.now();
+    physicsIntervalId = setInterval(() => {
+        const now = performance.now();
+        let remaining = Math.min((now - lastTime) / 1000, 0.05); // cap at 50 ms
+        lastTime = now;
+        while (remaining > 0) {
+            const dt = Math.min(remaining, SUB_DT);
+            physicsStep(dt);
+            remaining -= dt;
+        }
+        updateRotatingFrame();
+    }, 1);
+}
+
+function stopPhysicsInterval() {
+    if (physicsIntervalId !== null) {
+        clearInterval(physicsIntervalId);
+        physicsIntervalId = null;
+    }
 }
 
 function draw() {
@@ -299,7 +336,7 @@ function draw() {
     
     // Applied torque vector: lab-frame B1 = (0, sin(tonePhase), 0)
     // In rotating frame, apply same rotation used to transform M
-    if (showTorque && (holdTone || pulseSamplesRemaining > 0)) {
+    if (showTorque && (holdTone || pulseTimeRemaining > 0)) {
         const torqueY_lab = Math.sin(tonePhase);
         let torqueX_disp = 0;
         let torqueY_disp = torqueY_lab;
@@ -478,8 +515,9 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-// Auto-start animation immediately
+// Auto-start animation and physics immediately
 requestAnimationFrame(animate);
+startPhysicsInterval();
 
 // tone UI
 toneControl = document.getElementById('tone-vol');
@@ -489,6 +527,7 @@ toneLockBtn = document.getElementById('tone-lock');
 toneLed = document.getElementById('tone-led');
 pulsePi2Btn = document.getElementById('pulse-pi2');
 pulsePiBtn = document.getElementById('pulse-pi');
+detuneControl = document.getElementById('detune');
 detuneValueDisplay = document.getElementById('detune-val');
 larmorControl = document.getElementById('larmor');
 larmorValueDisplay = document.getElementById('larmor-val');
@@ -557,11 +596,11 @@ function updateToneState() {
 
 // Tone button: hold to drive (only active when not latched)
 toneBtn.addEventListener('click', () => {
-    if (!audioCtx) initAudio();
+    if (!audioCtx) initAudio(); else audioCtx.resume();
 });
 
 toneBtn.addEventListener('mousedown', () => {
-    if (!audioCtx) initAudio();
+    if (!audioCtx) initAudio(); else audioCtx.resume();
     if (!toneLocked && !pulseActive) {
         holdTone = true;
         updateToneState();
@@ -584,23 +623,23 @@ toneBtn.addEventListener('mouseleave', () => {
 
 // Latch button: toggles constant drive; disables Fire and pulse buttons while active
 toneLockBtn.addEventListener('click', () => {
-    if (!audioCtx) initAudio();
     toneLocked = !toneLocked;
     holdTone = toneLocked;
     toneLockBtn.style.fontWeight = toneLocked ? 'bold' : 'normal';
     toneLockBtn.style.backgroundColor = toneLocked ? '#ddd' : '';
+    if (toneLocked && audioCtx) audioCtx.resume();
     updateToneState();
 });
 toneLockBtn.click(); // start latched
 
 function triggerPulse(pulseAngle) {
-    if (!audioCtx) initAudio();
+    if (!audioCtx) initAudio(); else audioCtx.resume();
     const toneHz = Math.pow(10, parseFloat(toneControl.value));
-    if (toneHz <= 0 || pulseActive || !audioCtx) return;
+    if (toneHz <= 0 || pulseActive) return;
     const rabiOmega = 2 * Math.PI * toneHz;
     // RWA: effective Rabi = rabiOmega/2, so duration = 2*pulseAngle / rabiOmega
     const duration = 2 * pulseAngle / rabiOmega; // seconds
-    pulseSamplesRemaining = Math.round(duration * audioCtx.sampleRate);
+    pulseTimeRemaining = duration;
     pulseActive = true;
     updateToneState();
 }
@@ -631,6 +670,9 @@ audioOutputToggle = document.getElementById('audio-out-toggle');
 if (audioOutputToggle) {
     audioOutputToggle.addEventListener('change', () => {
         audioOutputEnabled = audioOutputToggle.checked;
+        if (audioOutputEnabled) {
+            if (!audioCtx) initAudio(); else audioCtx.resume();
+        }
     });
     audioOutputEnabled = audioOutputToggle.checked;
 }
