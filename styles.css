@@ -15,3 +15,26 @@ canvas {
     margin-top: 10px;
     font-family: monospace;
 }
+
+.meter {
+    display: flex;
+    align-items: center;
+    margin: 4px 0;
+}
+.meter span {
+    width: 30px;
+    text-align: right;
+    margin-right: 5px;
+}
+.bar {
+    flex: 1;
+    height: 12px;
+    background: #ddd;
+    margin: 0 5px;
+    position: relative;
+}
+.fill {
+    background: green;
+    height: 100%;
+    width: 0%;
+}

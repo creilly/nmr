@@ -157,17 +157,25 @@ function draw() {
     ctx.lineTo(projX, projY);
     ctx.stroke();
     ctx.restore();
-    // info text in rotating-frame cylindrical coords
-    // compute rotating-frame components regardless of toggle
+    // info meters in rotating-frame cylindrical coords
     const angle = -omega0 * labTime;
     const cosA = Math.cos(angle), sinA = Math.sin(angle);
     const Mx_r = M.x * cosA - M.y * sinA;
     const My_r = M.x * sinA + M.y * cosA;
     const Mz_r = M.z;
     const rho = Math.hypot(Mx_r, My_r);
-    const phi = Math.atan2(My_r, Mx_r); // radians
-    document.getElementById('info').textContent =
-        `\u03C1=${rho.toFixed(2)}, φ=${phi.toFixed(2)}, z=${Mz_r.toFixed(2)}`;
+    let phi = Math.atan2(My_r, Mx_r); // radians
+    // convert phi to degrees between -180 and 180
+    phi = phi * 180 / Math.PI;
+    // update numeric labels
+    document.getElementById('rho-val').textContent = rho.toFixed(2);
+    document.getElementById('phi-val').textContent = phi.toFixed(0) + '°';
+    document.getElementById('z-val').textContent = Mz_r.toFixed(2);
+    // update bar fills: percentages
+    document.getElementById('rho-fill').style.width = (rho * 100).toFixed(1) + '%';
+    // phi range -180..180 map to 0..100
+    document.getElementById('phi-fill').style.width = ((phi + 180) / 360 * 100).toFixed(1) + '%';
+    document.getElementById('z-fill').style.width = ((Mz_r + 1) / 2 * 100).toFixed(1) + '%';
 }
 
 function animate(timestamp) {
