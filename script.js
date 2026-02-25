@@ -23,8 +23,8 @@ let pulseActive = false;
 let pulseSamplesRemaining = 0;
 let toneOn = false;
 let tonePhase = 0;
-let toneFreq = 300; // Hz (also B0 Larmor frequency)
-let omega0 = 2 * Math.PI * toneFreq;
+let toneFreq = 1; // Hz (also B0 Larmor frequency)
+let omega0 = 2 * Math.PI * toneFreq; // = 2π rad/s
 let detuneHz = 0;
 let detuneControl = null;
 let detuneValueDisplay = null;
@@ -32,7 +32,7 @@ let larmorControl = null;
 let larmorValueDisplay = null;
 
 let frameToggle = null;
-let useRotatingFrame = true;
+let useRotatingFrame = false;
 let showTorque = true;
 
 let t1Slider = null;
@@ -147,27 +147,6 @@ function draw() {
     ctx.translate(cx, cy);
     ctx.fillStyle = '#666';
     ctx.font = '12px sans-serif';
-    // Rotating frame checkbox (drawn in canvas)
-    const cbSize = 11;
-    const cbX = -radius + 6;
-    const cbY = -radius + 4;
-    ctx.strokeStyle = '#555';
-    ctx.lineWidth = 1;
-    ctx.fillStyle = useRotatingFrame ? '#9933ff' : '#fff';
-    ctx.fillRect(cbX, cbY, cbSize, cbSize);
-    ctx.strokeRect(cbX, cbY, cbSize, cbSize);
-    if (useRotatingFrame) {
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(cbX + 2, cbY + 6);
-        ctx.lineTo(cbX + 5, cbY + 9);
-        ctx.lineTo(cbX + 9, cbY + 2);
-        ctx.stroke();
-    }
-    ctx.fillStyle = '#444';
-    ctx.lineWidth = 1;
-    ctx.fillText(useRotatingFrame ? 'Rotating frame' : 'Lab frame', cbX + cbSize + 5, cbY + 10);
     // sphere outline
     ctx.strokeStyle = '#444';
     ctx.beginPath();
@@ -398,6 +377,72 @@ function draw() {
         ctx.lineTo(tcbX + 9, tcbY + 2);
         ctx.stroke();
     }
+
+    // Axis indicator — bottom left
+    {
+        const axLen = 28;
+        const axOx = -cx + 28;
+        const axOy = cy - 28;
+        const axes = [
+            { vec: [1,0,0], color: '#228822', label: 'x' },
+            { vec: [0,1,0], color: '#cc2222', label: 'y' },
+            { vec: [0,0,1], color: '#2255cc', label: 'z' },
+        ];
+        ctx.lineWidth = 2;
+        ctx.font = 'bold 11px sans-serif';
+        for (const ax of axes) {
+            const tip = toCanvas(ax.vec[0], ax.vec[1], ax.vec[2]);
+            const ex = axOx + tip.px / radius * axLen;
+            const ey = axOy + tip.py / radius * axLen;
+            ctx.strokeStyle = ax.color;
+            ctx.beginPath();
+            ctx.moveTo(axOx, axOy);
+            ctx.lineTo(ex, ey);
+            ctx.stroke();
+            ctx.fillStyle = ax.color;
+            ctx.fillText(ax.label, ex + 3, ey + 4);
+        }
+    }
+
+    // Frame radio buttons (drawn in canvas, upper left) — drawn last so they appear over the sphere
+    {
+        const rbX = -radius + 12;
+        const rbR = 5;
+        const rb1Y = -radius + 13;
+        const rb2Y = rb1Y + 18;
+        const rbBoxX = -radius + 4, rbBoxY = -radius + 4, rbBoxW = 122, rbBoxH = 36;
+        ctx.fillStyle = 'rgba(255,255,255,0.82)';
+        ctx.strokeStyle = '#aaa';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.rect(rbBoxX, rbBoxY, rbBoxW, rbBoxH);
+        ctx.fill();
+        ctx.stroke();
+        const drawRadio = (x, y, selected) => {
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 1;
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(x, y, rbR, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+            if (selected) {
+                ctx.fillStyle = '#9933ff';
+                ctx.beginPath();
+                ctx.arc(x, y, rbR - 3, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        };
+        ctx.font = '12px sans-serif';
+        drawRadio(rbX, rb1Y, !useRotatingFrame);
+        ctx.fillStyle = '#444';
+        ctx.lineWidth = 1;
+        ctx.fillText('Lab frame', rbX + rbR + 5, rb1Y + 4);
+        drawRadio(rbX, rb2Y, useRotatingFrame);
+        ctx.fillStyle = '#444';
+        ctx.fillText('Rotating frame', rbX + rbR + 5, rb2Y + 4);
+    }
+
     ctx.restore();
     // info meters in cylindrical coords for selected frame
     const phi_threshold = 0.05;
@@ -433,11 +478,8 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-// Auto-start animation immediately; init audio on first user gesture (browser requirement)
+// Auto-start animation immediately
 requestAnimationFrame(animate);
-document.addEventListener('click', () => {
-    if (!audioCtx) initAudio();
-}, { once: true });
 
 // tone UI
 toneControl = document.getElementById('tone-vol');
@@ -458,11 +500,14 @@ canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
-    // Rotating frame checkbox (upper left)
-    const cbCanvasX = cx + (-radius + 6);
-    const cbCanvasY = cy + (-radius + 4);
-    if (mx >= cbCanvasX && mx <= cbCanvasX + 11 && my >= cbCanvasY && my <= cbCanvasY + 11) {
-        useRotatingFrame = !useRotatingFrame;
+    // Frame radio buttons (upper left)
+    const rbCanvasX = cx + (-radius + 12);
+    const rb1CanvasY = cy + (-radius + 13);
+    const rb2CanvasY = rb1CanvasY + 18;
+    if (my >= rb1CanvasY - 8 && my <= rb1CanvasY + 8 && mx >= rbCanvasX - 8 && mx <= rbCanvasX + 120) {
+        useRotatingFrame = false;
+    } else if (my >= rb2CanvasY - 8 && my <= rb2CanvasY + 8 && mx >= rbCanvasX - 8 && mx <= rbCanvasX + 120) {
+        useRotatingFrame = true;
     }
     // Torque checkbox (legend row 2, right side)
     const legW = 150, legPad = 8, tcbSize = 11;
@@ -511,6 +556,7 @@ function updateToneState() {
 
 // Tone button: in locked mode, clicking toggles; in free mode, holding keeps it on
 toneBtn.addEventListener('click', () => {
+    if (!audioCtx) initAudio();
     if (toneLocked) {
         holdTone = !holdTone;
         updateToneState();
@@ -518,6 +564,7 @@ toneBtn.addEventListener('click', () => {
 });
 
 toneBtn.addEventListener('mousedown', () => {
+    if (!audioCtx) initAudio();
     if (!toneLocked && !pulseActive) {
         holdTone = true;
         updateToneState();
@@ -551,6 +598,7 @@ toneLockBtn.addEventListener('click', () => {
 });
 
 function triggerPulse(pulseAngle) {
+    if (!audioCtx) initAudio();
     const toneHz = Math.pow(10, parseFloat(toneControl.value));
     if (toneHz <= 0 || pulseActive || !audioCtx) return;
     const rabiOmega = 2 * Math.PI * toneHz;
