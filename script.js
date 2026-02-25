@@ -158,13 +158,13 @@ function draw() {
     ctx.stroke();
     ctx.restore();
     // info meters in rotating-frame cylindrical coords
-    const angle = -omega0 * labTime;
-    const cosA = Math.cos(angle), sinA = Math.sin(angle);
-    const Mx_r = M.x * cosA - M.y * sinA;
-    const My_r = M.x * sinA + M.y * cosA;
-    const Mz_r = M.z;
-    const rho = Math.hypot(Mx_r, My_r);
-    let phi = Math.atan2(My_r, Mx_r); // radians
+    const angle2 = -omega0 * labTime;
+    const cosA2 = Math.cos(angle2), sinA2 = Math.sin(angle2);
+    const Mrx = M.x * cosA2 - M.y * sinA2;
+    const Mry = M.x * sinA2 + M.y * cosA2;
+    const Mrz = M.z;
+    const rho = Math.hypot(Mrx, Mry);
+    let phi = Math.atan2(Mry, Mrx); // radians
     // convert phi to degrees between -180 and 180
     phi = phi * 180 / Math.PI;
     // update numeric labels
