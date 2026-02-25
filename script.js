@@ -79,21 +79,29 @@ function draw() {
     ctx.beginPath();
     ctx.arc(0, 0, radius, 0, 2 * Math.PI);
     ctx.stroke();
-    // axes (x horizontal, z vertical)
+    // axes: x (horizontal), z (vertical), y (diagonal)
     ctx.strokeStyle = '#aaa';
     ctx.beginPath();
+    // x-axis
     ctx.moveTo(-radius, 0);
     ctx.lineTo(radius, 0);
+    // z-axis
     ctx.moveTo(0, -radius);
     ctx.lineTo(0, radius);
+    // y-axis drawn as a diagonal out of plane
+    const yoff = radius * 0.5;
+    ctx.moveTo(0, 0);
+    ctx.lineTo(yoff, -yoff);
     ctx.stroke();
-    // Bloch vector
+    // Bloch vector with simple oblique projection (show y component)
+    const k = 0.5; // projection factor for y
+    const k2 = 0.3;
+    const projX = (M.x + k * M.y) * radius;
+    const projY = (-M.z + k2 * M.y) * radius;
     ctx.strokeStyle = 'red';
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    const vx = M.x * radius;
-    const vy = -M.z * radius;
-    ctx.lineTo(vx, vy);
+    ctx.lineTo(projX, projY);
     ctx.stroke();
     ctx.restore();
     // info text
