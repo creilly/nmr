@@ -56,12 +56,12 @@ function initAudio() {
 // the dataArray is refreshed each animation frame; we'll step
 // through its samples using the known audio sample rate.
 
-// helper computes Bloch derivative in rotating frame for given magnetization and w1
-function blochDeriv(m, w1) {
+// helper computes Bloch derivative in the lab frame for given magnetization and B1
+function blochDerivLab(m, B1) {
     return {
-        x: -m.x / T2,
-        y: w1 * m.z - m.y / T2,
-        z: -w1 * m.y - (m.z - M0) / T1
+        x: omega0 * m.y - m.x / T2,
+        y: m.z * B1 - omega0 * m.x - m.y / T2,
+        z: -m.y * B1 - (m.z - M0) / T1
     };
 }
 
@@ -69,26 +69,28 @@ function updateBlochWithSignal(data, dt) {
     const scale = parseFloat(scaleControl.value);
     const toneVol = parseFloat(toneControl.value);
     const sampleDt = 1 / audioCtx.sampleRate;
-    // integrate one little step per sample using RK4 in rotating frame
+    // integrate one little step per sample using RK4 in lab frame
     for (let i = 0; i < data.length; i++) {
-        let w1 = micEnabled ? data[i] * scale : 0;
+        let B1 = micEnabled ? data[i] * scale : 0;
         if (toneOn) {
-            w1 += toneVol; // constant transverse field in rotating frame
+            B1 += toneVol * Math.sin(tonePhase);
+            tonePhase += omega0 * sampleDt;
+            if (tonePhase > 2 * Math.PI) tonePhase -= 2 * Math.PI;
         }
         // RK4
-        const k1 = blochDeriv(M, w1);
+        const k1 = blochDerivLab(M, B1);
         const m2 = { x: M.x + 0.5 * k1.x * sampleDt,
                      y: M.y + 0.5 * k1.y * sampleDt,
                      z: M.z + 0.5 * k1.z * sampleDt };
-        const k2 = blochDeriv(m2, w1);
+        const k2 = blochDerivLab(m2, B1);
         const m3 = { x: M.x + 0.5 * k2.x * sampleDt,
                      y: M.y + 0.5 * k2.y * sampleDt,
                      z: M.z + 0.5 * k2.z * sampleDt };
-        const k3 = blochDeriv(m3, w1);
+        const k3 = blochDerivLab(m3, B1);
         const m4 = { x: M.x + k3.x * sampleDt,
                      y: M.y + k3.y * sampleDt,
                      z: M.z + k3.z * sampleDt };
-        const k4 = blochDeriv(m4, w1);
+        const k4 = blochDerivLab(m4, B1);
         M.x += (k1.x + 2 * k2.x + 2 * k3.x + k4.x) * (sampleDt / 6);
         M.y += (k1.y + 2 * k2.y + 2 * k3.y + k4.y) * (sampleDt / 6);
         M.z += (k1.z + 2 * k2.z + 2 * k3.z + k4.z) * (sampleDt / 6);
@@ -104,13 +106,10 @@ function updateBlochWithSignal(data, dt) {
 }
 
 function draw() {
-    // compute coordinates for display
+    // compute coordinates for display: default lab->rotating if requested
     let Mx_r = M.x, My_r = M.y, Mz_r = M.z;
     if (useRotatingFrame) {
-        // already stored in rotating frame so nothing to do
-    } else {
-        // transform from rotating frame back to lab frame by rotating about z
-        const angle = omega0 * labTime;
+        const angle = -omega0 * labTime;
         const cosA = Math.cos(angle), sinA = Math.sin(angle);
         Mx_r = M.x * cosA - M.y * sinA;
         My_r = M.x * sinA + M.y * cosA;
