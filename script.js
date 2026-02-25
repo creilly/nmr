@@ -33,30 +33,23 @@ function initAudio() {
         });
 }
 
-function getAmplitude() {
-    if (!analyser) return 0;
-    analyser.getFloatTimeDomainData(dataArray);
-    let sum = 0;
-    for (let i = 0; i < dataArray.length; i++) {
-        const v = dataArray[i];
-        sum += v * v;
-    }
-    const rms = Math.sqrt(sum / dataArray.length);
-    return rms;
-}
+// the dataArray is refreshed each animation frame; we'll step
+// through its samples using the known audio sample rate.
 
-function updateBloch(dt) {
-    const amp = getAmplitude();
+function updateBlochWithSignal(data, dt) {
     const scale = parseFloat(scaleControl.value);
-    const w1 = amp * scale;
-    // Bloch equations in rotating frame
-    const dMx = -M.x / T2;
-    const dMy = w1 * M.z - M.y / T2;
-    const dMz = -w1 * M.y - (M.z - M0) / T1;
-    M.x += dMx * dt;
-    M.y += dMy * dt;
-    M.z += dMz * dt;
-    // normalize drift (keep inside sphere)
+    const sampleDt = 1 / audioCtx.sampleRate;
+    // integrate one little step per sample
+    for (let i = 0; i < data.length; i++) {
+        const w1 = data[i] * scale; // direct time-domain drive
+        const dMx = -M.x / T2;
+        const dMy = w1 * M.z - M.y / T2;
+        const dMz = -w1 * M.y - (M.z - M0) / T1;
+        M.x += dMx * sampleDt;
+        M.y += dMy * sampleDt;
+        M.z += dMz * sampleDt;
+    }
+    // drift normalization
     const mag = Math.hypot(M.x, M.y, M.z);
     if (mag > 0) {
         M.x /= mag;
@@ -100,7 +93,12 @@ function animate(timestamp) {
     if (!lastTime) lastTime = timestamp;
     const dt = (timestamp - lastTime) / 1000;
     lastTime = timestamp;
-    updateBloch(dt);
+
+    if (analyser) {
+        analyser.getFloatTimeDomainData(dataArray);
+        updateBlochWithSignal(dataArray, dt);
+    }
+
     draw();
     requestAnimationFrame(animate);
 }
