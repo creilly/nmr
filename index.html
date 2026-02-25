@@ -29,31 +29,27 @@
                 <td><span id="tone-val">1</span></td>
             </tr>
             <tr>
-                <td><label for="larmor">Larmor (Hz)</label></td>
+                <td><label for="larmor">Larmor freq (Hz)</label></td>
                 <td><input id="larmor" type="range" min="-2" max="3.3" step="0.01" value="2.48"></td>
                 <td><span id="larmor-val">300</span></td>
             </tr>
             <tr>
-                <td><label for="detune">Detune (Hz)</label></td>
+                <td><label for="detune">Detuning (Hz)</label></td>
                 <td><input id="detune" type="range" min="-10" max="10" step="0.01" value="0"></td>
                 <td><span id="detune-val">0.00</span></td>
             </tr>
         </table>
-        <label><input type="checkbox" id="frame-toggle" checked> Rotating frame</label>
-        <br>
-        <label><input type="checkbox" id="torque-toggle" checked> Show <span style="-webkit-text-stroke: 0.5px #ff8800; color: #000">torque vector</span></label>
-        <br>
         <label><input type="checkbox" id="t1-toggle"></label>
-        <label for="t1-slider">T1 (s)</label>
+        <label for="t1-slider">T<sub>1</sub> (s)</label>
         <input id="t1-slider" type="range" min="-1" max="2" step="0.01" value="0" disabled>
         <span id="t1-val">1</span>
         <br>
         <label><input type="checkbox" id="t2-toggle"></label>
-        <label for="t2-slider">T2 (s)</label>
+        <label for="t2-slider">T<sub>2</sub> (s)</label>
         <input id="t2-slider" type="range" min="-1" max="2" step="0.01" value="-0.3" disabled>
         <span id="t2-val">0.5</span>
         <br>
-        <label><input type="checkbox" id="audio-out-toggle"> Mx audio output</label>
+        <label><input type="checkbox" id="audio-out-toggle"> <i>M<sub>x</sub></i> audio output</label>
     </div>
     <div id="info">
         <div class="meter">

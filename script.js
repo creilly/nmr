@@ -147,7 +147,27 @@ function draw() {
     ctx.translate(cx, cy);
     ctx.fillStyle = '#666';
     ctx.font = '12px sans-serif';
-    ctx.fillText(useRotatingFrame ? 'Rotating frame' : 'Lab frame', -radius + 6, -radius + 14);
+    // Rotating frame checkbox (drawn in canvas)
+    const cbSize = 11;
+    const cbX = -radius + 6;
+    const cbY = -radius + 4;
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    ctx.fillStyle = useRotatingFrame ? '#9933ff' : '#fff';
+    ctx.fillRect(cbX, cbY, cbSize, cbSize);
+    ctx.strokeRect(cbX, cbY, cbSize, cbSize);
+    if (useRotatingFrame) {
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cbX + 2, cbY + 6);
+        ctx.lineTo(cbX + 5, cbY + 9);
+        ctx.lineTo(cbX + 9, cbY + 2);
+        ctx.stroke();
+    }
+    ctx.fillStyle = '#444';
+    ctx.lineWidth = 1;
+    ctx.fillText(useRotatingFrame ? 'Rotating frame' : 'Lab frame', cbX + cbSize + 5, cbY + 10);
     // sphere outline
     ctx.strokeStyle = '#444';
     ctx.beginPath();
@@ -273,7 +293,7 @@ function draw() {
     const xy_plane_proj = toCanvas(Mx_r, My_r, 0);
     
     ctx.strokeStyle = '#6699ff';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
     ctx.setLineDash([3, 3]);
     ctx.beginPath();
     ctx.moveTo(bloch_proj.px, bloch_proj.py);
@@ -328,6 +348,56 @@ function draw() {
     ctx.moveTo(0, 0);
     ctx.lineTo(projBloch.px, projBloch.py);
     ctx.stroke();
+    // Legend — upper right, ~15% canvas height (~52px)
+    const legW = 150, legH = 52, legPad = 8;
+    const legX = cx - legW - 6;
+    const legY = -cy + 6;
+    ctx.fillStyle = 'rgba(255,255,255,0.82)';
+    ctx.strokeStyle = '#aaa';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.rect(legX, legY, legW, legH);
+    ctx.fill();
+    ctx.stroke();
+    ctx.font = '12px sans-serif';
+    const row1Y = legY + legPad + 6;
+    const row2Y = legY + legPad + 6 + 24;
+    // Purple — magnetization
+    ctx.strokeStyle = '#9933ff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(legX + legPad, row1Y);
+    ctx.lineTo(legX + legPad + 22, row1Y);
+    ctx.stroke();
+    ctx.fillStyle = '#222';
+    ctx.fillText('magnetization', legX + legPad + 28, row1Y + 4);
+    // Orange — torque
+    ctx.strokeStyle = '#ff8800';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(legX + legPad, row2Y);
+    ctx.lineTo(legX + legPad + 22, row2Y);
+    ctx.stroke();
+    ctx.fillStyle = '#222';
+    ctx.fillText('torque vector', legX + legPad + 28, row2Y + 4);
+    // Torque checkbox (right side of row 2)
+    const tcbSize = 11;
+    const tcbX = legX + legW - legPad - tcbSize;
+    const tcbY = row2Y - 8;
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    ctx.fillStyle = showTorque ? '#ff8800' : '#fff';
+    ctx.fillRect(tcbX, tcbY, tcbSize, tcbSize);
+    ctx.strokeRect(tcbX, tcbY, tcbSize, tcbSize);
+    if (showTorque) {
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(tcbX + 2, tcbY + 6);
+        ctx.lineTo(tcbX + 4, tcbY + 9);
+        ctx.lineTo(tcbX + 9, tcbY + 2);
+        ctx.stroke();
+    }
     ctx.restore();
     // info meters in cylindrical coords for selected frame
     const phi_threshold = 0.05;
@@ -383,16 +453,29 @@ larmorControl = document.getElementById('larmor');
 larmorValueDisplay = document.getElementById('larmor-val');
 
 // frame toggle
-frameToggle = document.getElementById('frame-toggle');
-if (frameToggle) {
-    frameToggle.addEventListener('change', () => { useRotatingFrame = frameToggle.checked; });
-    useRotatingFrame = frameToggle.checked;
-}
-const torqueToggle = document.getElementById('torque-toggle');
-if (torqueToggle) {
-    torqueToggle.addEventListener('change', () => { showTorque = torqueToggle.checked; });
-    showTorque = torqueToggle.checked;
-}
+// Canvas click: toggle rotating frame checkbox
+canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    // Rotating frame checkbox (upper left)
+    const cbCanvasX = cx + (-radius + 6);
+    const cbCanvasY = cy + (-radius + 4);
+    if (mx >= cbCanvasX && mx <= cbCanvasX + 11 && my >= cbCanvasY && my <= cbCanvasY + 11) {
+        useRotatingFrame = !useRotatingFrame;
+    }
+    // Torque checkbox (legend row 2, right side)
+    const legW = 150, legPad = 8, tcbSize = 11;
+    const legX = cx - legW - 6;
+    const legY = -cy + 6;
+    const row2Y = legY + legPad + 6 + 24;
+    const tcbCanvasX = cx + (legX + legW - legPad - tcbSize);
+    const tcbCanvasY = cy + (row2Y - 8);
+    if (mx >= tcbCanvasX && mx <= tcbCanvasX + tcbSize && my >= tcbCanvasY && my <= tcbCanvasY + tcbSize) {
+        showTorque = !showTorque;
+    }
+});
+
 toneControl.addEventListener('input', () => {
     const toneHz = Math.pow(10, parseFloat(toneControl.value));
     toneValueDisplay.textContent = toneHz.toFixed(3).padStart(9, ' ');
