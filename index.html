@@ -7,7 +7,14 @@
 </head>
 <body>
     <h1>NMR Bloch Sphere Simulator</h1>
-    <p>This demo models the dynamics of nuclear spin magnetization (<i>M<sub>x</sub></i>,<i>M<sub>y</sub></i>,<i>M<sub>z</sub></i>) in a static magnetic field with longitudinal (<i>T</i></i><sub>1</sub>) and transverse (<i>T</i></i><sub>2</sub>) relaxation.</p>
+    <p>
+        This demo models the dynamics of nuclear spin magnetization 
+        (<i>M<sub>x</sub></i>,<i>M<sub>y</sub></i>,<i>M<sub>z</sub></i>) 
+        in a static <i>z</i>-polarized magnetic field and  
+        <i>y</i>-polarized oscillating field with decoherence modeled by longitudinal 
+        (<i>T</i></i><sub>1</sub>) and transverse (<i>T</i></i><sub>2</sub>) relaxation time constants. 
+        "Listen" to the nuclear spin by turning on the <i>M<sub>x</sub></i> audio output (see below). 
+    </p>
     <canvas id="bloch" width="350" height="350"></canvas>
     <div class="controls">
         <button id="set-mag">Goto</button>
@@ -25,7 +32,7 @@
         <table class="freq-table">
             <tr>
                 <td><label for="tone-vol">Rabi freq (Hz)</label></td>
-                <td><input id="tone-vol" type="range" min="-2" max="2" step="0.01" value="-0.60"></td>
+                <td><input id="tone-vol" type="range" min="-2" max="2" step="0.01" value="-1"></td>
                 <td><span id="tone-val">1</span></td>
             </tr>
             <tr>
