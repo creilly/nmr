@@ -126,9 +126,6 @@ scaleControl = document.getElementById('scale');
 scaleValueDisplay = document.getElementById('scale-val');
 scaleControl.addEventListener('input', () => {
     scaleValueDisplay.textContent = scaleControl.value;
-    // adjust default tone volume so pi pulse in 1s when desired
-    toneControl.value = (Math.PI / parseFloat(scaleControl.value)).toFixed(2);
-    toneValueDisplay.textContent = toneControl.value;
 });
 
 // tone UI
@@ -144,8 +141,7 @@ toneBtn.addEventListener('mousedown', () => { toneOn = true; });
 toneBtn.addEventListener('mouseup', () => { toneOn = false; });
 toneBtn.addEventListener('mouseleave', () => { toneOn = false; });
 
-// initialize default tone volume based on initial scale
-if (scaleControl) {
-    toneControl.value = (Math.PI / parseFloat(scaleControl.value)).toFixed(2);
+// ensure tone value display matches slider default (pi)
+if (toneControl) {
     toneValueDisplay.textContent = toneControl.value;
 }

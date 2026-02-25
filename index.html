@@ -17,8 +17,9 @@
         <br>
         <button id="tone-btn">Hold for tone</button>
         <label for="tone-vol">Tone volume</label>
-        <input id="tone-vol" type="range" min="0" max="50" step="0.1" value="1">
-        <span id="tone-val">1</span>
+        <!-- amplitude w1; initial value pi for 1s pi pulse -->
+        <input id="tone-vol" type="range" min="0" max="10" step="0.01" value="3.14">
+        <span id="tone-val">3.14</span>
     </div>
     <div id="info"></div>
     <script src="script.js"></script>
