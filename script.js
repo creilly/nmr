@@ -7,7 +7,10 @@ let toneValueDisplay = null;
 let toneBtn = null;
 let toneOn = false;
 let tonePhase = 0;
-const toneFreq = 300; // Hz
+const toneFreq = 300; // Hz (also B0 Larmor frequency)
+const omega0 = 2 * Math.PI * toneFreq;
+
+let labTime = 0; // track seconds elapsed for rotating frame
 
 let t1Slider = null;
 let t1Display = null;
@@ -54,21 +57,32 @@ function updateBlochWithSignal(data, dt) {
     const sampleDt = 1 / audioCtx.sampleRate;
     // integrate one little step per sample
     for (let i = 0; i < data.length; i++) {
-        // w1 is drive amplitude in rotating frame; we ignore fast oscillation
-        let w1 = data[i] * scale;
+        // B1 from mic plus oscillating tone
+        let B1 = data[i] * scale;
         if (toneOn) {
-            w1 += toneVol;
+            B1 += toneVol * Math.sin(tonePhase);
+            tonePhase += omega0 * sampleDt;
+            if (tonePhase > 2 * Math.PI) tonePhase -= 2 * Math.PI;
         }
-        const dMx = -M.x / T2;
-        const dMy = w1 * M.z - M.y / T2;
-        const dMz = -w1 * M.y - (M.z - M0) / T1;
+        // Bloch equations in lab frame with B0 along z (B0 = omega0)
+        const dMx = omega0 * M.y - M.x / T2;
+        const dMy = M.z * B1 - omega0 * M.x - M.y / T2;
+        const dMz = -M.y * B1 - (M.z - M0) / T1;
         M.x += dMx * sampleDt;
         M.y += dMy * sampleDt;
         M.z += dMz * sampleDt;
+        labTime += sampleDt;
     }
 }
 
 function draw() {
+    // calculate rotating-frame coordinates before drawing
+    const angle = -omega0 * labTime;
+    const cosA = Math.cos(angle), sinA = Math.sin(angle);
+    const Mx_r = M.x * cosA - M.y * sinA;
+    const My_r = M.x * sinA + M.y * cosA;
+    const Mz_r = M.z;
+
     ctx.clearRect(0, 0, width, height);
     ctx.save();
     ctx.translate(cx, cy);
@@ -91,11 +105,9 @@ function draw() {
     ctx.moveTo(0, 0);
     ctx.lineTo(yoff, -yoff);
     ctx.stroke();
-    // Bloch vector with simple oblique projection (show y component)
-    const k = 0.5; // projection factor for y
-    const k2 = 0.3;
-    const projX = (M.x + k * M.y) * radius;
-    const projY = (-M.z + k2 * M.y) * radius;
+    // Bloch vector projection using rotating-frame components
+    const projX = (Mx_r + 0.5 * My_r) * radius;
+    const projY = (-Mz_r + 0.3 * My_r) * radius;
     ctx.strokeStyle = 'red';
     ctx.beginPath();
     ctx.moveTo(0, 0);
