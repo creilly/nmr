@@ -14,6 +14,8 @@ let labTime = 0; // track seconds elapsed for rotating frame
 
 let micEnabled = true;
 let micToggle = null;
+let frameToggle = null;
+let useRotatingFrame = true;
 
 let t1Slider = null;
 let t1Display = null;
@@ -104,12 +106,15 @@ function updateBlochWithSignal(data, dt) {
 }
 
 function draw() {
-    // calculate rotating-frame coordinates before drawing
-    const angle = -omega0 * labTime;
-    const cosA = Math.cos(angle), sinA = Math.sin(angle);
-    const Mx_r = M.x * cosA - M.y * sinA;
-    const My_r = M.x * sinA + M.y * cosA;
-    const Mz_r = M.z;
+    // choose coordinates either lab-frame or rotating-frame
+    let Mx_r = M.x, My_r = M.y, Mz_r = M.z;
+    if (useRotatingFrame) {
+        const angle = -omega0 * labTime;
+        const cosA = Math.cos(angle), sinA = Math.sin(angle);
+        Mx_r = M.x * cosA - M.y * sinA;
+        My_r = M.x * sinA + M.y * cosA;
+        Mz_r = M.z;
+    }
 
     ctx.clearRect(0, 0, width, height);
     ctx.save();
@@ -182,7 +187,11 @@ micToggle = document.getElementById('mic-toggle');
 if (micToggle) {
     micToggle.addEventListener('change', () => { micEnabled = micToggle.checked; });
 }
-
+// frame toggle
+frameToggle = document.getElementById('frame-toggle');
+if (frameToggle) {
+    frameToggle.addEventListener('change', () => { useRotatingFrame = frameToggle.checked; });
+}
 toneControl.addEventListener('input', () => {
     toneValueDisplay.textContent = toneControl.value;
 });
