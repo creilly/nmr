@@ -63,13 +63,6 @@ function updateBlochWithSignal(data, dt) {
         M.y += dMy * sampleDt;
         M.z += dMz * sampleDt;
     }
-    // drift normalization
-    const mag = Math.hypot(M.x, M.y, M.z);
-    if (mag > 0) {
-        M.x /= mag;
-        M.y /= mag;
-        M.z /= mag;
-    }
 }
 
 function draw() {
