@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NMR Bloch Sphere Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>NMR Bloch Sphere Simulator</h1>
+    <p>This demo models a two-level spin in a static magnetic field with longitudinal (T1) and transverse (T2) relaxation.  Use your microphone input to drive an x‑polarized RF field; louder audio produces stronger pulses.</p>
+    <canvas id="bloch" width="500" height="500"></canvas>
+    <div class="controls">
+        <button id="start">Start</button>
+        <label for="scale">Drive scale</label>
+        <input id="scale" type="range" min="0" max="50" step="0.1" value="10">
+        <span id="scale-val">10</span>
+    </div>
+    <div id="info"></div>
+    <script src="script.js"></script>
+</body>
+</html>
