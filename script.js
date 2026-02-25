@@ -2,6 +2,13 @@ let audioCtx, analyser, dataArray, source;
 let scaleControl = null;
 let scaleValueDisplay = null;
 
+let toneControl = null;
+let toneValueDisplay = null;
+let toneBtn = null;
+let toneOn = false;
+let tonePhase = 0;
+const toneFreq = 300; // Hz
+
 // Bloch vector (normalized)
 let M = { x: 0, y: 0, z: 1 };
 const M0 = 1;
@@ -38,10 +45,17 @@ function initAudio() {
 
 function updateBlochWithSignal(data, dt) {
     const scale = parseFloat(scaleControl.value);
+    const toneVol = parseFloat(toneControl.value);
     const sampleDt = 1 / audioCtx.sampleRate;
+    const twoPiF = 2 * Math.PI * toneFreq;
     // integrate one little step per sample
     for (let i = 0; i < data.length; i++) {
-        const w1 = data[i] * scale; // direct time-domain drive
+        let w1 = data[i] * scale; // direct microphone drive
+        if (toneOn) {
+            w1 += Math.sin(tonePhase) * toneVol;
+            tonePhase += twoPiF * sampleDt;
+            if (tonePhase > 2 * Math.PI) tonePhase -= 2 * Math.PI;
+        }
         const dMx = -M.x / T2;
         const dMy = w1 * M.z - M.y / T2;
         const dMz = -w1 * M.y - (M.z - M0) / T1;
@@ -112,4 +126,26 @@ scaleControl = document.getElementById('scale');
 scaleValueDisplay = document.getElementById('scale-val');
 scaleControl.addEventListener('input', () => {
     scaleValueDisplay.textContent = scaleControl.value;
+    // adjust default tone volume so pi pulse in 1s when desired
+    toneControl.value = (Math.PI / parseFloat(scaleControl.value)).toFixed(2);
+    toneValueDisplay.textContent = toneControl.value;
 });
+
+// tone UI
+toneControl = document.getElementById('tone-vol');
+toneValueDisplay = document.getElementById('tone-val');
+toneBtn = document.getElementById('tone-btn');
+
+toneControl.addEventListener('input', () => {
+    toneValueDisplay.textContent = toneControl.value;
+});
+
+toneBtn.addEventListener('mousedown', () => { toneOn = true; });
+toneBtn.addEventListener('mouseup', () => { toneOn = false; });
+toneBtn.addEventListener('mouseleave', () => { toneOn = false; });
+
+// initialize default tone volume based on initial scale
+if (scaleControl) {
+    toneControl.value = (Math.PI / parseFloat(scaleControl.value)).toFixed(2);
+    toneValueDisplay.textContent = toneControl.value;
+}
