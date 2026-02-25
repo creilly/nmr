@@ -15,8 +15,8 @@ let t2Slider = null;
 let t2Display = null;
 
 // Bloch vector (normalized)
-let M = { x: 0, y: 0, z: 1 };
-const M0 = 1;
+let M = { x: 0, y: 0, z: -1 };
+const M0 = -1;   // equilibrium now downwards
 let T1 = 1.0;   // seconds, adjustable
 let T2 = 0.5;   // seconds, adjustable
 
@@ -52,14 +52,12 @@ function updateBlochWithSignal(data, dt) {
     const scale = parseFloat(scaleControl.value);
     const toneVol = parseFloat(toneControl.value);
     const sampleDt = 1 / audioCtx.sampleRate;
-    const twoPiF = 2 * Math.PI * toneFreq;
     // integrate one little step per sample
     for (let i = 0; i < data.length; i++) {
-        let w1 = data[i] * scale; // direct microphone drive
+        // w1 is drive amplitude in rotating frame; we ignore fast oscillation
+        let w1 = data[i] * scale;
         if (toneOn) {
-            w1 += Math.sin(tonePhase) * toneVol;
-            tonePhase += twoPiF * sampleDt;
-            if (tonePhase > 2 * Math.PI) tonePhase -= 2 * Math.PI;
+            w1 += toneVol;
         }
         const dMx = -M.x / T2;
         const dMy = w1 * M.z - M.y / T2;
