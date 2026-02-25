@@ -9,11 +9,16 @@ let toneOn = false;
 let tonePhase = 0;
 const toneFreq = 300; // Hz
 
+let t1Slider = null;
+let t1Display = null;
+let t2Slider = null;
+let t2Display = null;
+
 // Bloch vector (normalized)
 let M = { x: 0, y: 0, z: 1 };
 const M0 = 1;
-const T1 = 1.0;   // seconds
-const T2 = 0.5;   // seconds
+let T1 = 1.0;   // seconds, adjustable
+let T2 = 0.5;   // seconds, adjustable
 
 let lastTime = null;
 const canvas = document.getElementById('bloch');
@@ -138,3 +143,27 @@ toneBtn.addEventListener('mouseleave', () => { toneOn = false; });
 if (toneControl) {
     toneValueDisplay.textContent = toneControl.value;
 }
+
+// T1/T2 sliders (log scale -1 to 2 corresponds to 0.1s–100s)
+function logToVal(x) { return Math.pow(10, x); }
+function valToLog(v) { return Math.log10(v); }
+
+t1Slider = document.getElementById('t1-slider');
+t1Display = document.getElementById('t1-val');
+t2Slider = document.getElementById('t2-slider');
+t2Display = document.getElementById('t2-val');
+
+function updateT1() {
+    T1 = logToVal(parseFloat(t1Slider.value));
+    t1Display.textContent = T1.toFixed(2);
+}
+function updateT2() {
+    T2 = logToVal(parseFloat(t2Slider.value));
+    t2Display.textContent = T2.toFixed(2);
+}
+
+t1Slider.addEventListener('input', updateT1);
+t2Slider.addEventListener('input', updateT2);
+// initialize values according to defaults
+updateT1();
+updateT2();
