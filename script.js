@@ -67,22 +67,38 @@ let yAngleDeg = 45; // Angle (in degrees) of y-axis projection relative to x-axi
 
 function initAudio() {
     stopPhysicsInterval(); // audio thread takes over physics
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const sampleDt = 1 / audioCtx.sampleRate;
+    try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const sampleDt = 1 / audioCtx.sampleRate;
 
-    scriptProcessor = audioCtx.createScriptProcessor(1024, 0, 1);
-    outputGainNode = audioCtx.createGain();
-    outputGainNode.gain.value = 0.1;
-    scriptProcessor.onaudioprocess = (e) => {
-        const output = e.outputBuffer.getChannelData(0);
-        for (let i = 0; i < output.length; i++) {
-            physicsStep(sampleDt);
-            output[i] = audioOutputEnabled ? M.x : 0;
-        }
-        updateRotatingFrame();
-    };
-    scriptProcessor.connect(outputGainNode);
-    outputGainNode.connect(audioCtx.destination);
+        scriptProcessor = audioCtx.createScriptProcessor(1024, 0, 1);
+        outputGainNode = audioCtx.createGain();
+        outputGainNode.gain.value = 0.1;
+        scriptProcessor.onaudioprocess = (e) => {
+            const output = e.outputBuffer.getChannelData(0);
+            for (let i = 0; i < output.length; i++) {
+                physicsStep(sampleDt);
+                output[i] = audioOutputEnabled ? M.x : 0;
+            }
+            updateRotatingFrame();
+        };
+        scriptProcessor.connect(outputGainNode);
+        outputGainNode.connect(audioCtx.destination);
+    } catch (err) {
+        console.warn('Audio init failed, running without audio:', err);
+        audioCtx = null;
+        audioOutputEnabled = false;
+        if (audioOutputToggle) audioOutputToggle.checked = false;
+        startPhysicsInterval(); // fall back to interval-based physics
+    }
+}
+
+function tryStartAudio() {
+    if (!audioCtx) {
+        initAudio();
+    } else {
+        audioCtx.resume().catch(err => console.warn('AudioContext resume failed:', err));
+    }
 }
 
 // helper computes Bloch derivative in the lab frame for given magnetization and B1
@@ -521,7 +537,7 @@ startPhysicsInterval();
 
 // Eagerly init audio on first interaction with any control (pointerdown fires before click)
 document.querySelector('.controls').addEventListener('pointerdown', () => {
-    if (!audioCtx) initAudio(); else audioCtx.resume();
+    tryStartAudio();
 }, { once: true });
 
 // tone UI
@@ -601,11 +617,11 @@ function updateToneState() {
 
 // Tone button: hold to drive (only active when not latched)
 toneBtn.addEventListener('click', () => {
-    if (!audioCtx) initAudio(); else audioCtx.resume();
+    tryStartAudio();
 });
 
 toneBtn.addEventListener('mousedown', () => {
-    if (!audioCtx) initAudio(); else audioCtx.resume();
+    tryStartAudio();
     if (!toneLocked && !pulseActive) {
         holdTone = true;
         updateToneState();
@@ -632,13 +648,13 @@ toneLockBtn.addEventListener('click', () => {
     holdTone = toneLocked;
     toneLockBtn.style.fontWeight = toneLocked ? 'bold' : 'normal';
     toneLockBtn.style.backgroundColor = toneLocked ? '#ddd' : '';
-    if (toneLocked && audioCtx) audioCtx.resume();
+    if (toneLocked) tryStartAudio();
     updateToneState();
 });
 toneLockBtn.click(); // start latched
 
 function triggerPulse(pulseAngle) {
-    if (!audioCtx) initAudio(); else audioCtx.resume();
+    tryStartAudio();
     const toneHz = Math.pow(10, parseFloat(toneControl.value));
     if (toneHz <= 0 || pulseActive) return;
     const rabiOmega = 2 * Math.PI * toneHz;
@@ -676,7 +692,7 @@ if (audioOutputToggle) {
     audioOutputToggle.addEventListener('change', () => {
         audioOutputEnabled = audioOutputToggle.checked;
         if (audioOutputEnabled) {
-            if (!audioCtx) initAudio(); else audioCtx.resume();
+            tryStartAudio();
         }
     });
     audioOutputEnabled = audioOutputToggle.checked;
