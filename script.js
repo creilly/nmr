@@ -648,7 +648,6 @@ toneLockBtn.addEventListener('click', () => {
     holdTone = toneLocked;
     toneLockBtn.style.fontWeight = toneLocked ? 'bold' : 'normal';
     toneLockBtn.style.backgroundColor = toneLocked ? '#ddd' : '';
-    if (toneLocked) tryStartAudio();
     updateToneState();
 });
 toneLockBtn.click(); // start latched
